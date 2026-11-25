@@ -1,11 +1,11 @@
-# Remplacer les identifiants par les vrais pseudos GitHub de l'équipe.
+# Propriétaires du code : Harouna (harounambaye), Fatou (fatoufall737), Papa (sirius-code7).
 # Le LeadTech relit tout ; chaque propriétaire est relecteur de ses fichiers.
-*                                   @HAROUNA_GITHUB
-/src/faq_assistant/retrieval.py     @FATOU_GITHUB @HAROUNA_GITHUB
-/src/faq_assistant/guardrails.py    @FATOU_GITHUB @HAROUNA_GITHUB
-/eval/evaluate.py                   @FATOU_GITHUB @HAROUNA_GITHUB
-/data/                              @FATOU_GITHUB @HAROUNA_GITHUB
-/src/faq_assistant/asr.py           @PAPA_GITHUB @HAROUNA_GITHUB
-/src/faq_assistant/tts.py           @PAPA_GITHUB @HAROUNA_GITHUB
-/src/faq_assistant/text_norm.py     @PAPA_GITHUB @HAROUNA_GITHUB
-/eval/bench_asr.py                  @PAPA_GITHUB @HAROUNA_GITHUB
+*                                   @harounambaye
+/src/faq_assistant/retrieval.py     @fatoufall737 @harounambaye
+/src/faq_assistant/guardrails.py    @fatoufall737 @harounambaye
+/eval/evaluate.py                   @fatoufall737 @harounambaye
+/data/                              @fatoufall737 @harounambaye
+/src/faq_assistant/asr.py           @sirius-code7 @harounambaye
+/src/faq_assistant/tts.py           @sirius-code7 @harounambaye
+/src/faq_assistant/text_norm.py     @sirius-code7 @harounambaye
+/eval/bench_asr.py                  @sirius-code7 @harounambaye
