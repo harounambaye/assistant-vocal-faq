@@ -1,0 +1,39 @@
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  no-ai-coauthor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Refuser toute attribution Claude dans les commits et la PR
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          PATTERN='co-authored-by:.*(claude|anthropic)|noreply@anthropic\.com|generated with \[?claude|claude-session:'
+          if git log --format='%an <%ae>%n%cn <%ce>%n%B' "$BASE..$HEAD" | grep -iE "$PATTERN"; then
+            echo "::error::Attribution Claude trouvée dans un commit. Corriger avec : git rebase -i puis reword, ou réinstaller le hook."
+            exit 1
+          fi
+          if printf '%s' "$PR_BODY" | grep -iE "$PATTERN"; then
+            echo "::error::Attribution Claude trouvée dans la description de la PR."
+            exit 1
+          fi
+
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pytest ruff
+      - run: ruff check src tests eval app.py
+      - run: pytest -q

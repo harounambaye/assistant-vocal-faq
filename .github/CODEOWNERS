@@ -1,0 +1,11 @@
+# Remplacer les identifiants par les vrais pseudos GitHub de l'équipe.
+# Le LeadTech relit tout ; chaque propriétaire est relecteur de ses fichiers.
+*                                   @HAROUNA_GITHUB
+/src/faq_assistant/retrieval.py     @FATOU_GITHUB @HAROUNA_GITHUB
+/src/faq_assistant/guardrails.py    @FATOU_GITHUB @HAROUNA_GITHUB
+/eval/evaluate.py                   @FATOU_GITHUB @HAROUNA_GITHUB
+/data/                              @FATOU_GITHUB @HAROUNA_GITHUB
+/src/faq_assistant/asr.py           @PAPA_GITHUB @HAROUNA_GITHUB
+/src/faq_assistant/tts.py           @PAPA_GITHUB @HAROUNA_GITHUB
+/src/faq_assistant/text_norm.py     @PAPA_GITHUB @HAROUNA_GITHUB
+/eval/bench_asr.py                  @PAPA_GITHUB @HAROUNA_GITHUB

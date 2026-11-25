@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+.claude/settings.local.json
+.cache/
+*.npy
+outputs/
+# Les enregistrements de test restent hors du dépôt (vie privée + jeu non vu)
+data/test_oral/*.wav
+data/test_oral/*.mp3
+data/test_oral/*.m4a
+data/test_oral/*.ogg
+data/dev_oral/*.wav
+data/dev_oral/*.mp3
+data/dev_oral/*.m4a
+data/dev_oral/*.ogg

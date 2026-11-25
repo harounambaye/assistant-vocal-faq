@@ -1,0 +1,9 @@
+# Fins de ligne LF partout : le hook commit-msg et les scripts sh cassent en CRLF sous Windows.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.wav binary
+*.mp3 binary
+*.ogg binary
+*.m4a binary
+*.npy binary

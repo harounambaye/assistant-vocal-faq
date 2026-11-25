@@ -1,0 +1,14 @@
+#!/bin/sh
+# Retire automatiquement toute attribution à Claude / Anthropic du message de commit.
+# Installé par scripts/install-hooks.sh (git config core.hooksPath hooks).
+MSG_FILE="$1"
+TMP="$MSG_FILE.tmp"
+grep -viE '^(co-authored-by:.*(claude|anthropic)|claude-session:|.*generated with \[?claude)' "$MSG_FILE" > "$TMP" || true
+# supprime les lignes vides en fin de message
+awk 'NF {for (i = 0; i < blank; i++) print ""; blank = 0; print; next} {blank++}' "$TMP" > "$MSG_FILE"
+rm -f "$TMP"
+if [ ! -s "$MSG_FILE" ]; then
+  echo "commit-msg : message vide après nettoyage." >&2
+  exit 1
+fi
+exit 0
