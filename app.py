@@ -1,12 +1,19 @@
 """Interface Gradio. PROPRIÉTAIRE : Harouna.
 
-Lancement Colab : !python app.py --share
-TODO Harouna :
-- brancher WhisperASR, FaqRetriever, EdgeTTS, ClaudeRewriter quand leurs PR sont mergées ;
-- afficher : transcription, question FAQ reconnue + score, réponse, tableau des latences ;
-- case à cocher « Reformulation LLM » (pour comparer avec/sans en soutenance) ;
-- mention visible : « Voix de synthèse générée par IA ».
-- préchauffer les modèles au démarrage (1 requête factice) pour éviter la 1re requête lente devant le jury.
+Lancement Colab (GPU T4), la clé est copiée des secrets AVANT de lancer l'app :
+    import os; from google.colab import userdata
+    os.environ["ANTHROPIC_API_KEY"] = userdata.get("ANTHROPIC_API_KEY")   # facultatif
+    !python app.py --share
+
+Ce que fait l'app :
+- question au micro, par fichier (note vocale WhatsApp) ou tapée (plan B si le micro lâche) ;
+- affiche ce qui a été compris, la question FAQ reconnue + score + alternatives, la réponse,
+  le tableau des latences par étape ; mention « Voix de synthèse générée par IA » ;
+- case « Reformulation LLM » : deux pipelines partagent les mêmes modèles (comparaison en soutenance) ;
+- préchauffe les modèles au démarrage ; aucun module en panne n'empêche l'app de démarrer.
+
+TODO Harouna : quand l'ASR et le TTS de Papa sont mergés, vérifier sur Colab le son en flux
+(1re phrase < 500 ms) et la conversion des notes vocales ogg.
 """
 from __future__ import annotations
 
