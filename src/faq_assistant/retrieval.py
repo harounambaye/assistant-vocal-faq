@@ -10,6 +10,8 @@ Fonctionnement :
    à chaque requête, un seul encodage.
 3. Recherche hybride : score = alpha * cosinus + (1 - alpha) * BM25 normalisé.
    L'embedding comprend la paraphrase, BM25 rattrape les mots-clés (« bip », « TVA »).
+   BM25 est divisé par le score maximal possible pour cette requête (et non par le meilleur
+   score obtenu) : une question hors sujet garde un BM25 faible au lieu d'être gonflée à 1.
 4. La requête est normalisée : minuscules, hésitations retirées (« euh », « bon »),
    graphies fréquentes de l'ASR corrigées (« woyo fall » -> « woyofal »).
 5. Match.alternatives contient les k-1 entrées suivantes (démo, analyse d'erreurs).
@@ -78,6 +80,7 @@ class BM25:
         nb_docs_avec = Counter(mot for doc in documents for mot in set(doc))
         n = len(documents)
         self.idf = {mot: math.log(1 + (n - df + 0.5) / (df + 0.5)) for mot, df in nb_docs_avec.items()}
+        self.idf_inconnu = math.log(1 + (n + 0.5) / 0.5)   # mot absent de la FAQ : le plus rare possible
 
     def scores(self, requete: list[str]) -> list[float]:
         resultats = []
@@ -88,6 +91,14 @@ class BM25:
                 for mot in requete if mot in freq
             ))
         return resultats
+
+    def score_maximal(self, requete: list[str]) -> float:
+        """Score qu'obtiendrait un document contenant tous les mots de la requête.
+
+        Les mots absents de la FAQ (« météo », « Thiès ») comptent au dénominateur :
+        une question hors sujet obtient donc un BM25 normalisé proche de 0.
+        """
+        return sum(self.idf.get(mot, self.idf_inconnu) * (self.k1 + 1) for mot in set(requete))
 
 
 def encodeur_e5(nom_modele: str) -> Encodeur:
@@ -134,9 +145,9 @@ class FaqRetriever:
         if not requete:
             return None
         cosinus = np.clip(self.vecteurs @ self.encodeur([f"query: {requete}"])[0], 0.0, 1.0)
-        bm25 = np.array(self.bm25.scores(mots_cles(requete)))
-        if bm25.max() > 0:
-            bm25 = bm25 / bm25.max()
+        mots = mots_cles(requete)
+        maximum = self.bm25.score_maximal(mots)
+        bm25 = np.array(self.bm25.scores(mots)) / maximum if maximum > 0 else np.zeros(len(self.variantes))
         hybride = self.alpha * cosinus + (1 - self.alpha) * bm25
 
         meilleur: dict[int, float] = {}            # entrée -> meilleur score de ses variantes
