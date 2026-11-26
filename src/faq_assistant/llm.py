@@ -11,7 +11,6 @@ Il n'invente aucune information : s'il n'y a rien à adapter, il renvoie la rép
 """
 from __future__ import annotations
 
-import os
 import re
 
 from .config import SETTINGS
@@ -42,17 +41,24 @@ SYSTEM = (
 
 
 class ClaudeRewriter:
-    def __init__(self):
-        import anthropic  # import tardif : l'app tourne sans la dépendance si USE_LLM=0
-        self.client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"], max_retries=0)
+    def __init__(self, client=None):
+        if client is None:
+            import anthropic  # import tardif : l'app tourne sans la dépendance si USE_LLM=0
+            client = anthropic.Anthropic(max_retries=0)  # lit ANTHROPIC_API_KEY (secret Colab)
+        self.client = client
 
     def rewrite(self, question: str, match: Match, timeout_s: float) -> str:
-        msg = self.client.messages.create(
+        msg = self.client.with_options(timeout=timeout_s, max_retries=0).messages.create(
             model=SETTINGS.llm_model,
             max_tokens=SETTINGS.llm_max_tokens,
+            # Haiku 5.5 réfléchit par défaut : la réflexion mangerait les 160 tokens et la latence.
+            thinking={"type": "disabled"},
+            output_config={"effort": "low"},
             system=SYSTEM,
             messages=[{"role": "user", "content":
                        f"Question du client : {question}\nRéponse officielle : {match.answer}"}],
-            timeout=timeout_s,
         )
+        # Phrase coupée ou refus : le pipeline attrape l'erreur et lit la FAQ brute.
+        if msg.stop_reason != "end_turn":
+            raise RuntimeError(f"reformulation inutilisable (stop_reason={msg.stop_reason})")
         return "".join(b.text for b in msg.content if b.type == "text").strip()
