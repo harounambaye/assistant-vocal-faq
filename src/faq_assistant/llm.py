@@ -11,10 +11,28 @@ Il n'invente aucune information : s'il n'y a rien à adapter, il renvoie la rép
 """
 from __future__ import annotations
 
+import logging
 import os
+import re
 
 from .config import SETTINGS
 from .types import Match
+
+log = logging.getLogger(__name__)
+
+# Espaces (normal, insécable, fine insécable) entre deux chiffres : « 4 689 » -> « 4689 »
+_DIGIT_GAP = re.compile(r"(?<=\d)[ \u00a0\u202f](?=\d)")
+_NUMBER = re.compile(r"\d+(?:[.,]\d+)?")
+
+
+def extract_numbers(text: str) -> set[str]:
+    """Nombres écrits en chiffres, sous une forme comparable (« 136,49 » == « 136.49 »)."""
+    return {n.replace(",", ".") for n in _NUMBER.findall(_DIGIT_GAP.sub("", text))}
+
+
+def numbers_are_grounded(rewritten: str, faq_answer: str) -> bool:
+    """Vrai si chaque nombre de la reformulation figure déjà dans la réponse FAQ."""
+    return extract_numbers(rewritten) <= extract_numbers(faq_answer)
 
 SYSTEM = (
     "Tu es l'assistant vocal du service client Senelec pour le compteur Woyofal. "
@@ -27,17 +45,44 @@ SYSTEM = (
 
 
 class ClaudeRewriter:
-    def __init__(self):
-        import anthropic  # import tardif : l'app tourne sans la dépendance si USE_LLM=0
-        self.client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"], max_retries=0)
+    def __init__(self, client=None):
+        if client is None:
+            import anthropic  # import tardif : l'app tourne sans la dépendance si USE_LLM=0
+            client = anthropic.Anthropic(max_retries=0)  # lit ANTHROPIC_API_KEY (secret Colab)
+        self.client = client
 
     def rewrite(self, question: str, match: Match, timeout_s: float) -> str:
-        msg = self.client.messages.create(
+        msg = self.client.with_options(timeout=timeout_s, max_retries=0).messages.create(
             model=SETTINGS.llm_model,
             max_tokens=SETTINGS.llm_max_tokens,
+            # Haiku 5.5 réfléchit par défaut : la réflexion mangerait les 160 tokens et la latence.
+            thinking={"type": "disabled"},
+            output_config={"effort": "low"},
             system=SYSTEM,
             messages=[{"role": "user", "content":
                        f"Question du client : {question}\nRéponse officielle : {match.answer}"}],
-            timeout=timeout_s,
         )
+        # Phrase coupée ou refus : le pipeline attrape l'erreur et lit la FAQ brute.
+        if msg.stop_reason != "end_turn":
+            raise RuntimeError(f"reformulation inutilisable (stop_reason={msg.stop_reason})")
         return "".join(b.text for b in msg.content if b.type == "text").strip()
+
+
+def make_rewriter() -> ClaudeRewriter | None:
+    """Reformulateur prêt à l'emploi, ou None (le pipeline lira alors la FAQ brute).
+
+    None si USE_LLM=0, si ANTHROPIC_API_KEY est absente (sur Colab : la copier depuis les
+    secrets avec google.colab.userdata.get) ou si le paquet anthropic n'est pas installé.
+    Ne lève jamais d'exception : l'absence de LLM ne doit pas empêcher l'app de démarrer.
+    """
+    if not SETTINGS.use_llm:
+        log.info("USE_LLM=0 : réponses FAQ brutes")
+        return None
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        log.warning("ANTHROPIC_API_KEY absente : réponses FAQ brutes")
+        return None
+    try:
+        return ClaudeRewriter()
+    except Exception as exc:  # paquet absent, clé mal formée...
+        log.warning("Reformulation LLM désactivée : %s", exc)
+        return None
