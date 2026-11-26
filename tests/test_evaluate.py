@@ -1,8 +1,14 @@
 """Tests de l'évaluation, avec un faux pipeline : sans audio, sans modèle."""
 from __future__ import annotations
 
-from eval.evaluate import Resultat, balayage, ecrire_csv, evaluer_une, lire_labels, resume
-from faq_assistant.types import AssistantReply, Match, StageTimings, Transcript
+import sys
+from pathlib import Path
+
+# La racine du dépôt n'est pas sur le chemin de pytest (seulement src/) : on l'ajoute pour importer eval.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from eval.evaluate import Resultat, balayage, ecrire_csv, evaluer_une, lire_labels, resume  # noqa: E402
+from faq_assistant.types import AssistantReply, Match, StageTimings, Transcript  # noqa: E402
 
 
 class FauxPipeline:
