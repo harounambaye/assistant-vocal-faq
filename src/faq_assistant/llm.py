@@ -17,7 +17,7 @@ from .config import SETTINGS
 from .types import Match
 
 # Espaces (normal, insécable, fine insécable) entre deux chiffres : « 4 689 » -> « 4689 »
-_DIGIT_GAP = re.compile(r"(?<=\d)[   ](?=\d)")
+_DIGIT_GAP = re.compile(r"(?<=\d)[ \u00a0\u202f](?=\d)")
 _NUMBER = re.compile(r"\d+(?:[.,]\d+)?")
 
 

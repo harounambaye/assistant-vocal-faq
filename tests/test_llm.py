@@ -15,6 +15,10 @@ def test_extract_joins_thousands_and_decimals():
     assert extract_numbers("4 689 FCFA et 136,49") == {"4689", "136.49"}
 
 
+def test_extract_joins_non_breaking_spaces():
+    assert extract_numbers("4 689 FCFA et 1 000 kWh") == {"4689", "1000"}
+
+
 def test_extract_ignores_sentence_final_dot():
     assert extract_numbers("Tapez 801.") == {"801"}
 
