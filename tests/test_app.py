@@ -7,7 +7,7 @@ from pathlib import Path
 # app.py est à la racine du dépôt, hors de src/ : on ajoute la racine au chemin.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app import load_questions, render_latencies, render_match, render_transcript  # noqa: E402
+from app import answer_events, load_questions, render_latencies, render_match, render_transcript  # noqa: E402
 from faq_assistant.types import AssistantReply, Match, StageTimings, Transcript  # noqa: E402
 
 QUESTIONS = {"Q05": "Comment connaître le crédit ?", "Q06": "Comment lire la consommation ?"}
@@ -52,3 +52,12 @@ def test_latency_table():
     md = render_latencies(reply())
     assert "| ASR | 420 ms |" in md and "| Recherche | 12 ms |" in md
     assert "| LLM | — |" in md  # étape non exécutée
+
+
+def test_answer_events_turns_each_chunk_into_screen_updates():
+    r = reply()
+    events = list(answer_events([("p1.mp3", r), (None, r)], QUESTIONS))
+    assert [e[0] for e in events] == ["p1.mp3", None]
+    audio, heard, match, answer, latencies = events[-1]
+    assert "sama crédit" in heard and "Q05" in match
+    assert answer == "**Réponse :** Tapez 801." and "| Étape |" in latencies

@@ -13,11 +13,13 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Iterable
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 
 from faq_assistant.config import SETTINGS  # noqa: E402
+from faq_assistant.pipeline import Pipeline  # noqa: E402
 from faq_assistant.types import AssistantReply  # noqa: E402
 
 STATUS_LABELS = {
@@ -63,6 +65,30 @@ def render_latencies(reply: AssistantReply) -> str:
             ("TTS, 1er son", t.tts_first_audio_ms), ("TTS, total", t.tts_total_ms), ("**Total**", t.total_ms)]
     body = "\n".join(f"| {name} | {f'{ms:.0f} ms' if ms > 0 else '—'} |" for name, ms in rows)
     return "| Étape | Latence |\n|---|---:|\n" + body
+
+
+def build_pipelines() -> tuple[dict[bool, Pipeline], bool]:
+    """Charge chaque modèle UNE fois ; deux pipelines les partagent (avec / sans LLM).
+
+    Renvoie ({use_llm: pipeline}, llm_disponible).
+    """
+    from faq_assistant.asr import WhisperASR
+    from faq_assistant.llm import make_rewriter
+    from faq_assistant.retrieval import FaqRetriever
+    from faq_assistant.tts import EdgeTTS
+
+    asr, retriever, tts = WhisperASR(), FaqRetriever(SETTINGS.faq_path), EdgeTTS()
+    rewriter = make_rewriter()
+    pipelines = {False: Pipeline(asr, retriever, tts, None),
+                 True: Pipeline(asr, retriever, tts, rewriter)}
+    return pipelines, rewriter is not None
+
+
+def answer_events(stream: Iterable[tuple[str | None, AssistantReply]], questions: dict[str, str]):
+    """(morceau audio, réponse) du pipeline -> (audio, compris, question, réponse, latences) pour Gradio."""
+    for chunk, reply in stream:
+        yield (chunk, render_transcript(reply), render_match(reply, questions),
+               f"**Réponse :** {reply.text}", render_latencies(reply))
 
 
 def build_demo():
