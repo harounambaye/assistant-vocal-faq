@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 
 from . import guardrails
 from .config import MSG_ERROR, MSG_NO_SPEECH, MSG_UNKNOWN, MSG_URGENT, SETTINGS
@@ -60,12 +60,20 @@ class Pipeline:
 
     # --- bout en bout, en flux (Gradio joue chaque phrase dès qu'elle est prête)
     def run_stream(self, audio_path: str) -> Iterator[tuple[str | None, AssistantReply]]:
+        return self._run(lambda: self.asr.transcribe(audio_path))
+
+    def run_text_stream(self, text: str) -> Iterator[tuple[str | None, AssistantReply]]:
+        """Question tapée au clavier : même chemin que l'audio, sans ASR (démo, plan B micro)."""
+        # Durée fictive = durée minimale : une question tapée n'est jamais du « silence ».
+        return self._run(lambda: Transcript(text=text.strip(), duration_s=SETTINGS.min_speech_s))
+
+    def _run(self, transcribe: Callable[[], Transcript]) -> Iterator[tuple[str | None, AssistantReply]]:
         timings = StageTimings()
         t_start = time.perf_counter()
         transcript = Transcript(text="")
         try:
             t0 = time.perf_counter()
-            transcript = self.asr.transcribe(audio_path)
+            transcript = transcribe()
             timings.asr_ms = _ms(t0)
             text, status, match = self.answer_text(transcript, timings)
         except Exception:

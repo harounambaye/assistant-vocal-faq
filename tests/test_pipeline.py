@@ -81,3 +81,22 @@ def test_good_rewrite_is_spoken():
 def test_invented_number_falls_back_to_faq():
     r = run(speech("combien il me reste"), rewriter=FixedRewriter("Tapez 810."))
     assert r.status == "ok" and r.text == "Tapez 801."
+
+
+def run_text(text, score=0.95):
+    p = Pipeline(FakeASR(Transcript(text="ne doit pas servir")), FakeRetriever(score), FakeTTS())
+    *_, (_, reply) = list(p.run_text_stream(text))
+    return reply
+
+
+def test_typed_question_skips_asr():
+    r = run_text("  comment voir mon crédit  ")
+    assert r.status == "ok" and r.transcript.text == "comment voir mon crédit"
+
+
+def test_empty_typed_question_is_not_heard():
+    assert run_text("   ").text == MSG_NO_SPEECH
+
+
+def test_typed_emergency():
+    assert run_text("il y a des étincelles sur le compteur").text == MSG_URGENT
