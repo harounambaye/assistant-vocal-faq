@@ -91,20 +91,49 @@ def answer_events(stream: Iterable[tuple[str | None, AssistantReply]], questions
                f"**Réponse :** {reply.text}", render_latencies(reply))
 
 
-def build_demo():
+def build_demo(pipelines: dict[bool, Pipeline], llm_ok: bool, questions: dict[str, str]):
     import gradio as gr
 
+    def stream_to_screen(stream):
+        for audio, *texts in answer_events(stream, questions):
+            # None = pas de nouveau morceau : on ne touche pas au lecteur audio en flux.
+            yield (gr.skip() if audio is None else audio, *texts)
+
+    def on_audio(path, use_llm):
+        if path:  # micro arrêté sans enregistrement : rien à faire
+            yield from stream_to_screen(pipelines[use_llm].run_stream(path))
+
+    def on_text(text, use_llm):
+        yield from stream_to_screen(pipelines[use_llm].run_text_stream(text or ""))
+
     with gr.Blocks(title="Assistant vocal Woyofal") as demo:
-        gr.Markdown("## Assistant vocal Woyofal (Senelec)\n*Voix de synthèse générée par IA.*")
-        mic = gr.Audio(sources=["microphone", "upload"], type="filepath", label="Posez votre question")
-        out_audio = gr.Audio(label="Réponse", autoplay=True, streaming=True)
-        out_text = gr.Markdown()
-        mic.stop_recording(lambda p: (None, "TODO : brancher Pipeline.run_stream"),
-                           mic, [out_audio, out_text])
+        gr.Markdown("## Assistant vocal Woyofal (Senelec)\n\n"
+                    "**Voix de synthèse générée par IA.** Les réponses viennent de la FAQ officielle "
+                    "Woyofal (sources Senelec et CRSE). En cas de doute : service client au 33 867 66 66.")
+        with gr.Row():
+            with gr.Column():
+                mic = gr.Audio(sources=["microphone", "upload"], type="filepath",
+                               label="Posez votre question (micro ou note vocale)")
+                text = gr.Textbox(label="… ou tapez-la", placeholder="sama compteur dafa bip, que faire ?")
+                send = gr.Button("Envoyer la question tapée")
+                use_llm = gr.Checkbox(
+                    value=llm_ok, interactive=llm_ok, label="Reformulation LLM (Claude Haiku 5.5)",
+                    info=None if llm_ok else "Indisponible : pas de clé ANTHROPIC_API_KEY ou USE_LLM=0")
+            with gr.Column():
+                out_audio = gr.Audio(label="Réponse parlée", autoplay=True, streaming=True)
+                heard, match, answer, latencies = gr.Markdown(), gr.Markdown(), gr.Markdown(), gr.Markdown()
+
+        outputs = [out_audio, heard, match, answer, latencies]
+        mic.stop_recording(on_audio, [mic, use_llm], outputs)
+        mic.upload(on_audio, [mic, use_llm], outputs)
+        send.click(on_text, [text, use_llm], outputs)
+        text.submit(on_text, [text, use_llm], outputs)
     return demo
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--share", action="store_true")
-    build_demo().queue().launch(share=ap.parse_args().share)
+    args = ap.parse_args()
+    pipelines, llm_ok = build_pipelines()
+    build_demo(pipelines, llm_ok, load_questions()).queue().launch(share=args.share)
