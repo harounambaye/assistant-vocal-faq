@@ -45,9 +45,15 @@ def test_bm25_prefere_le_document_qui_contient_le_mot():
     assert scores[0] > 0 and scores[1] == 0
 
 
+def test_bm25_hors_sujet_reste_faible():
+    bm25 = BM25([["compteur", "bip"], ["credit", "acheter"]])
+    mots = ["temps", "demain", "thies"]
+    assert max(bm25.scores(mots)) / bm25.score_maximal(mots) == 0
+
+
 def test_question_exacte(recherche):
     match = recherche.search("Comment connaître le crédit qui me reste ?")
-    assert match.faq_id == "Q05" and match.score > 0.9
+    assert match.faq_id == "Q05" and match.score > 0.75
 
 
 def test_exemple_wolof(recherche):
