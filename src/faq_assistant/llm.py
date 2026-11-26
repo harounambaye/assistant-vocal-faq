@@ -12,9 +12,24 @@ Il n'invente aucune information : s'il n'y a rien à adapter, il renvoie la rép
 from __future__ import annotations
 
 import os
+import re
 
 from .config import SETTINGS
 from .types import Match
+
+# Espaces (normal, insécable, fine insécable) entre deux chiffres : « 4 689 » -> « 4689 »
+_DIGIT_GAP = re.compile(r"(?<=\d)[   ](?=\d)")
+_NUMBER = re.compile(r"\d+(?:[.,]\d+)?")
+
+
+def extract_numbers(text: str) -> set[str]:
+    """Nombres écrits en chiffres, sous une forme comparable (« 136,49 » == « 136.49 »)."""
+    return {n.replace(",", ".") for n in _NUMBER.findall(_DIGIT_GAP.sub("", text))}
+
+
+def numbers_are_grounded(rewritten: str, faq_answer: str) -> bool:
+    """Vrai si chaque nombre de la reformulation figure déjà dans la réponse FAQ."""
+    return extract_numbers(rewritten) <= extract_numbers(faq_answer)
 
 SYSTEM = (
     "Tu es l'assistant vocal du service client Senelec pour le compteur Woyofal. "
