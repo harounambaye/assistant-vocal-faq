@@ -7,7 +7,14 @@ from pathlib import Path
 # app.py est à la racine du dépôt, hors de src/ : on ajoute la racine au chemin.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app import answer_events, load_questions, render_latencies, render_match, render_transcript  # noqa: E402
+from app import (  # noqa: E402
+    answer_events,
+    load_questions,
+    render_latencies,
+    render_match,
+    render_transcript,
+    warm_up,
+)
 from faq_assistant.types import AssistantReply, Match, StageTimings, Transcript  # noqa: E402
 
 QUESTIONS = {"Q05": "Comment connaître le crédit ?", "Q06": "Comment lire la consommation ?"}
@@ -61,3 +68,27 @@ def test_answer_events_turns_each_chunk_into_screen_updates():
     audio, heard, match, answer, latencies = events[-1]
     assert "sama crédit" in heard and "Q05" in match
     assert answer == "**Réponse :** Tapez 801." and "| Étape |" in latencies
+
+
+class _BrokenASR:
+    def transcribe(self, audio_path):
+        raise NotImplementedError("ASR pas encore mergé")
+
+
+class _FakeTTS:
+    def synthesize_stream(self, text):
+        yield "p1.mp3"
+
+
+class _FakeRetriever:
+    def search(self, query, k=3):
+        return Match("Q05", QUESTIONS["Q05"], "Tapez 801.", 0.95)
+
+
+def test_warm_up_never_blocks_startup():
+    from faq_assistant.pipeline import Pipeline
+
+    p = Pipeline(_BrokenASR(), _FakeRetriever(), _FakeTTS())
+    report = warm_up({False: p, True: p}, llm_ok=False)
+    assert report["texte (recherche, LLM, TTS)"].startswith("ok")
+    assert report["audio (ASR)"].startswith("error")  # signalé, sans plantage

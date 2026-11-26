@@ -84,6 +84,43 @@ def build_pipelines() -> tuple[dict[bool, Pipeline], bool]:
     return pipelines, rewriter is not None
 
 
+def _quiet_wav(seconds: float = 1.0, rate: int = 16000) -> str:
+    """Fichier WAV presque silencieux (bruit très faible) pour réveiller Whisper et le VAD."""
+    import random
+    import struct
+    import tempfile
+    import wave
+
+    path = Path(tempfile.gettempdir()) / "woyofal_warmup.wav"
+    with wave.open(str(path), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        frames = (struct.pack("<h", random.randint(-30, 30)) for _ in range(int(seconds * rate)))
+        w.writeframes(b"".join(frames))
+    return str(path)
+
+
+def warm_up(pipelines: dict[bool, Pipeline], llm_ok: bool) -> dict[str, str]:
+    """Requêtes factices au démarrage : la 1re vraie question n'attend pas le chargement des modèles.
+
+    Ne lève jamais d'exception : un module absent ou en panne n'empêche pas l'app de démarrer.
+    """
+    import time
+
+    report = {}
+    for name, run in [("texte (recherche, LLM, TTS)",
+                       lambda: pipelines[llm_ok].run_text_stream("comment recharger mon compteur woyofal")),
+                      ("audio (ASR)", lambda: pipelines[False].run_stream(_quiet_wav()))]:
+        t0 = time.perf_counter()
+        try:
+            *_, (_, reply) = list(run())
+            report[name] = f"{reply.status} en {time.perf_counter() - t0:.1f} s"
+        except Exception as exc:  # le pipeline attrape déjà presque tout ; ceinture et bretelles
+            report[name] = f"échec : {exc}"
+    return report
+
+
 def answer_events(stream: Iterable[tuple[str | None, AssistantReply]], questions: dict[str, str]):
     """(morceau audio, réponse) du pipeline -> (audio, compris, question, réponse, latences) pour Gradio."""
     for chunk, reply in stream:
@@ -131,9 +168,16 @@ def build_demo(pipelines: dict[bool, Pipeline], llm_ok: bool, questions: dict[st
     return demo
 
 
-if __name__ == "__main__":
+def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--share", action="store_true")
+    ap.add_argument("--share", action="store_true", help="lien public Gradio (Colab)")
     args = ap.parse_args()
     pipelines, llm_ok = build_pipelines()
+    print("LLM :", "actif" if llm_ok else "inactif (réponses FAQ brutes)")
+    for step, result in warm_up(pipelines, llm_ok).items():
+        print(f"Préchauffage {step} : {result}")
     build_demo(pipelines, llm_ok, load_questions()).queue().launch(share=args.share)
+
+
+if __name__ == "__main__":
+    main()
