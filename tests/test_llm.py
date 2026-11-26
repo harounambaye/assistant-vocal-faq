@@ -1,11 +1,13 @@
 """Contrôle « le LLM n'invente aucun chiffre » : tourne sans clé API ni internet."""
 from __future__ import annotations
 
+from dataclasses import replace
 from types import SimpleNamespace
 
 import pytest
 
-from faq_assistant.llm import ClaudeRewriter, extract_numbers, numbers_are_grounded
+from faq_assistant.config import SETTINGS
+from faq_assistant.llm import ClaudeRewriter, extract_numbers, make_rewriter, numbers_are_grounded
 from faq_assistant.types import Match
 
 FAQ = "Le prix est de 4 689 FCFA, soit 136,49 FCFA le kWh. Appelez le 33 867 66 66 ou tapez 801."
@@ -76,3 +78,25 @@ def test_rewrite_returns_text_without_thinking_and_with_timeout():
 def test_truncated_or_refused_rewrite_raises(stop_reason):
     with pytest.raises(RuntimeError):
         ClaudeRewriter(FakeClient(stop_reason=stop_reason)).rewrite("q", MATCH, timeout_s=2.5)
+
+
+# ---- make_rewriter : jamais de plantage au démarrage ---------------------------
+def test_no_rewriter_without_key(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    assert make_rewriter() is None
+
+
+def test_no_rewriter_when_llm_disabled(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    monkeypatch.setattr("faq_assistant.llm.SETTINGS", replace(SETTINGS, use_llm=False))
+    assert make_rewriter() is None
+
+
+def test_no_rewriter_when_client_fails(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+
+    def broken(*args, **kwargs):
+        raise ImportError("No module named 'anthropic'")
+
+    monkeypatch.setattr("faq_assistant.llm.ClaudeRewriter", broken)
+    assert make_rewriter() is None
