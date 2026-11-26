@@ -63,3 +63,21 @@ def test_urgent_bypasses_search():
 def test_llm_failure_falls_back_to_faq():
     r = run(speech("combien il me reste"), rewriter=BrokenRewriter())
     assert r.status == "ok" and r.text == "Tapez 801."
+
+
+class FixedRewriter:
+    def __init__(self, text):
+        self.text = text
+
+    def rewrite(self, question, match, timeout_s):
+        return self.text
+
+
+def test_good_rewrite_is_spoken():
+    r = run(speech("combien il me reste"), rewriter=FixedRewriter("Il suffit de taper 801."))
+    assert r.status == "ok" and r.text == "Il suffit de taper 801."
+
+
+def test_invented_number_falls_back_to_faq():
+    r = run(speech("combien il me reste"), rewriter=FixedRewriter("Tapez 810."))
+    assert r.status == "ok" and r.text == "Tapez 801."
