@@ -45,6 +45,32 @@ Aucune question hors sujet n'a reçu de fausse réponse : l'assistant n'invente 
 3. Régler le seuil sur un jeu de dev plus grand (30 questions prévues, 6 enregistrées).
 4. Refaire la mesure avec le module `asr.py` définitif et la latence du 1er son (TTS).
 
+## Essais complémentaires pour le wolof
+
+Le projet demande un assistant en français **et** en wolof. Les 3 échecs wolof du test ont donc donné lieu à
+trois essais (28 novembre 2026), mesurés sur un **jeu de dev wolof** séparé : 7 notes enregistrées par un membre
+de l'équipe (4 questions de la FAQ, 3 hors sujet), non publiées. Le jeu de test n'a servi qu'à l'essai 1, sans
+changer le seuil (0,64) ni le code : le résultat officiel reste **20/29**.
+
+| Essai | Idée | Résultat |
+|---|---|---|
+| 1. ASR wolof `M9and2M/whisper-small-wolof` | Transcrire aussi avec un modèle entraîné sur le wolof et garder le texte au meilleur score | Test : 0/3 en wolof, aucun gain global. Dev wolof : 0/4. Jusqu'à 11 s par note |
+| 2. Table d'équivalences wolof → français (`CORRECTIONS`) et mots vides wolof | « kontoor » → « compteur », « koti » → « code », « kuuraŋ » → « courant »… | Dev wolof : 0/4. Dev français : 4/6 → 3/6. **Rejetée, non intégrée** |
+| 3. Traduction wolof → français (NLLB-200, 600M) avant la recherche | Chercher en français, là où la recherche fonctionne | Dev wolof : 0/4, traductions sans sens |
+
+Dans les trois essais, les questions hors sujet restent refusées (3/3) : l'assistant n'invente pas.
+
+**Pourquoi ça bloque** : une chaîne d'erreurs.
+1. On parle en mélangeant wolof et français ; chaque modèle déforme la langue qu'il ne connaît pas
+   (« est-ce que » → « eska », « compteur » → « kontoor », « Sonatel » → « su natal »).
+2. Le modèle de recherche `multilingual-e5-small` ne comprend pas le wolof : toutes les phrases wolof obtiennent
+   un score entre 0,59 et 0,64, qu'elles soient dans la FAQ ou hors sujet.
+3. La FAQ ne contient qu'une formulation wolof par question.
+
+**Pistes** : un ASR entraîné sur le wolof mêlé de français ; un modèle de recherche multilingue plus grand ;
+plus d'exemples wolof dans la FAQ, écrits par des locuteurs ; en attendant, proposer au client de reformuler
+en français quand l'assistant ne comprend pas.
+
 ## Limites et transparence
 
 - 4 voix seulement (5 à 6 prévues) ; jeu de dev réduit à 6 questions.
