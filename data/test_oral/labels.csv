@@ -1,0 +1,30 @@
+fichier,locuteur,faq_id_attendu,remarque
+t01.ogg,T1,Q01,wolof
+t02.ogg,T1,Q02,wolof et français
+t03.ogg,T1,Q03,
+t04.ogg,T1,Q05,
+t05.ogg,T1,NONE,hors sujet (Wave)
+t06.ogg,T1,Q06,
+t07.ogg,T1,Q07,wolof
+t08.ogg,T1,Q09,
+t10.ogg,T2,Q12,version refaite gardée
+t11.ogg,T2,NONE,hors sujet (essence)
+t12.ogg,T2,Q13,version refaite gardée
+t13.ogg,T2,Q14,
+t14.ogg,T2,Q15,
+t15.ogg,T2,Q17,ASR : facture -> future
+t16.ogg,T2,Q18,
+t17.ogg,T3,NONE,hors sujet (université)
+t18.ogg,T3,Q19,
+t19.ogg,T3,Q20,
+t20.ogg,T3,Q21,
+t21.ogg,T3,Q22,
+t22.ogg,T3,Q23,ASR : quel prix -> premier coûte
+t23.ogg,T3,Q25,
+t24.ogg,T4,NONE,hors sujet (météo)
+t25.ogg,T4,Q26,
+t26.ogg,T4,Q27,version refaite gardée
+t27.ogg,T4,Q28,ASR : numéro T27 -> Cité 27
+t28.ogg,T4,Q29,ASR : s'allume -> salue
+t29.ogg,T4,Q30,
+t30.ogg,T4,Q08,
